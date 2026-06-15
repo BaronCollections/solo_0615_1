@@ -9,7 +9,9 @@ export interface LoginResult {
 export function validateLogin(username: string, password: string): LoginResult {
   if (!username || !password) {
     return {
-      success: false, message: '请输入账号和密码' }
+      success: false,
+      message: '请输入账号和密码'
+    }
   }
 
   const user = mockUsers.find((u) => u.username === username)
@@ -17,14 +19,14 @@ export function validateLogin(username: string, password: string): LoginResult {
   if (!user) {
     return {
       success: false,
-      message: '账号不存在'
+      message: '账号不存在，请检查您的输入'
     }
   }
 
   if (user.password !== password) {
     return {
       success: false,
-      message: '密码错误'
+      message: '密码错误，请重新输入'
     }
   }
 

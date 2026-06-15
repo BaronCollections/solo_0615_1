@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
-import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
+import { type FormInstance, type FormRules } from 'element-plus'
 import { User, Lock } from '@element-plus/icons-vue'
 import { validateLogin } from '../utils/auth'
 import { mockUsers, type MockUser } from '../mock/accounts'
@@ -10,6 +10,7 @@ const REMEMBERED_USERNAME_KEY = 'smart_campus_remembered_username'
 const loginFormRef = ref<FormInstance>()
 const loading = ref(false)
 const loggedInUser = ref<MockUser | null>(null)
+const errorMessage = ref('')
 const rememberMe = ref(false)
 
 const loginForm = reactive({
@@ -42,6 +43,7 @@ const handleLogin = async () => {
   await loginFormRef.value.validate((valid) => {
     if (!valid) return
 
+    errorMessage.value = ''
     loading.value = true
     setTimeout(() => {
       const result = validateLogin(loginForm.username, loginForm.password)
@@ -52,9 +54,9 @@ const handleLogin = async () => {
           localStorage.removeItem(REMEMBERED_USERNAME_KEY)
         }
         loggedInUser.value = result.user
-        ElMessage.success(result.message)
       } else {
-        ElMessage.error(result.message)
+        loggedInUser.value = null
+        errorMessage.value = result.message
       }
       loading.value = false
     }, 500)
@@ -63,6 +65,7 @@ const handleLogin = async () => {
 
 const handleLogout = () => {
   loggedInUser.value = null
+  errorMessage.value = ''
   loginForm.password = ''
   if (!rememberMe.value) {
     loginForm.username = ''
@@ -75,6 +78,15 @@ const handleLogout = () => {
     <div v-if="!loggedInUser" class="login-card">
       <h1 class="system-title">智慧校园管理系统</h1>
       <h2 class="system-subtitle">Smart Campus Management System</h2>
+
+      <el-alert
+        v-if="errorMessage"
+        :title="errorMessage"
+        type="error"
+        :closable="false"
+        show-icon
+        class="error-alert"
+      />
 
       <el-form
         ref="loginFormRef"
@@ -195,11 +207,15 @@ const handleLogout = () => {
 
 .system-subtitle {
   text-align: center;
-  margin: 0 0 32px;
+  margin: 0 0 24px;
   font-size: 14px;
   font-weight: 400;
   color: #909399;
   letter-spacing: 1px;
+}
+
+.error-alert {
+  margin-bottom: 20px;
 }
 
 .login-form {
