@@ -1,15 +1,18 @@
 import { reactive } from 'vue'
-import type { Course, Teacher, ClassGroup, Classroom, Schedule } from '../mock/scheduling'
+import type { Course, Teacher, ClassGroup, Classroom, Schedule, Student } from '../mock/scheduling'
 import {
   mockCourses,
   mockTeachers,
   mockClassGroups,
   mockClassrooms,
   mockSchedules,
+  mockStudents,
   getCourseName as _getCourseName,
   getTeacherName as _getTeacherName,
   getClassGroupName as _getClassGroupName,
   getClassroomName as _getClassroomName,
+  getStudentsByClassId as _getStudentsByClassId,
+  getStudentCountByClassId as _getStudentCountByClassId,
 } from '../mock/scheduling'
 
 export const store = reactive({
@@ -18,6 +21,7 @@ export const store = reactive({
   classGroups: [...mockClassGroups] as ClassGroup[],
   classrooms: [...mockClassrooms] as Classroom[],
   schedules: [...mockSchedules] as Schedule[],
+  students: [...mockStudents] as Student[],
 })
 
 export function getCourseName(id: string): string {
@@ -38,4 +42,12 @@ export function getClassroomName(id: string): string {
 
 export function getBuildingList(): string[] {
   return [...new Set(store.classrooms.map(r => r.building))]
+}
+
+export function getStudentsByClassId(classId: string): Student[] {
+  return store.students.filter(s => s.classId === classId)
+}
+
+export function getStudentCountByClassId(classId: string): number {
+  return store.students.filter(s => s.classId === classId).length
 }
