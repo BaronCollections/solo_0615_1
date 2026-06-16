@@ -1,4 +1,5 @@
-import { mockUsers, type MockUser } from '../mock/accounts'
+import { mockUsers } from '../mock/accounts'
+import type { MockUser } from '../types'
 
 export interface LoginResult {
   success: boolean
