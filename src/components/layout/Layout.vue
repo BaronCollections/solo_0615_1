@@ -3,11 +3,15 @@ import { ref, computed, watch } from 'vue'
 import Sidebar from './Sidebar.vue'
 import Header from './Header.vue'
 import Dashboard from '../../views/Dashboard.vue'
+import Scheduling from '../../views/Scheduling.vue'
+import { useAuth } from '../../stores/auth'
 
 const activeMenu = ref('dashboard')
+const { logout } = useAuth()
 
 const currentView = computed(() => {
   if (activeMenu.value === 'dashboard') return Dashboard
+  if (activeMenu.value === 'course-schedule') return Scheduling
   return Dashboard
 })
 
@@ -40,7 +44,7 @@ watch(activeMenu, () => {
     <div class="main-wrapper">
       <Header :page-title="pageTitle" />
       <main class="main-content">
-        <component :is="currentView" />
+        <component :is="currentView" @logout="logout" />
       </main>
     </div>
   </div>
