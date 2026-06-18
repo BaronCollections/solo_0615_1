@@ -68,6 +68,20 @@ export const menuList: MenuItem[] = [
     ]
   },
   {
+    key: 'scheduling',
+    title: '排课管理',
+    icon: 'Calendar',
+    roles: ['admin', 'teacher'],
+    children: [
+      {
+        key: 'course-scheduling',
+        title: '课程排课',
+        icon: 'EditCalendar',
+        roles: ['admin', 'teacher']
+      }
+    ]
+  },
+  {
     key: 'attendance',
     title: '考勤管理',
     icon: 'Clock',

@@ -12,6 +12,7 @@ const { logout } = useAuth()
 const currentView = computed(() => {
   if (activeMenu.value === 'dashboard') return Dashboard
   if (activeMenu.value === 'course-schedule') return Scheduling
+  if (activeMenu.value === 'course-scheduling') return Scheduling
   return Dashboard
 })
 
@@ -20,6 +21,7 @@ const pageTitle = computed(() => {
     dashboard: '工作台',
     'course-list': '课程列表',
     'course-schedule': '课程表',
+    'course-scheduling': '课程排课',
     'student-list': '学生列表',
     'student-score': '成绩管理',
     'teacher-list': '教师列表',
