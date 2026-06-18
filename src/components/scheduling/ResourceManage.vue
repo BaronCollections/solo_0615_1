@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed } from 'vue'
 import { Search } from '@element-plus/icons-vue'
-import type { Course, Teacher, ClassGroup, Classroom, Student } from '../../mock/scheduling'
+import type { Course, Teacher, ClassGroup, Classroom } from '../../mock/scheduling'
 import { store, getStudentsByClassId, getStudentCountByClassId } from '../../store/scheduling'
 
 const activeTab = ref('course')
@@ -23,12 +23,12 @@ const editingTeacher = ref<Teacher | null>(null)
 const editingClass = ref<ClassGroup | null>(null)
 const editingClassroom = ref<Classroom | null>(null)
 
-const courseForm = reactive({ name: '', credit: 3, hours: 48 })
+const courseForm = reactive({ name: '', credit: 3, hours: 48, enabled: true })
 const teacherForm = reactive({ name: '', department: '' })
 const classForm = reactive({ name: '', grade: '', department: '' })
 const classroomForm = reactive({ name: '', building: '', capacity: 60, floor: 1 })
 
-const resetCourseForm = () => { courseForm.name = ''; courseForm.credit = 3; courseForm.hours = 48 }
+const resetCourseForm = () => { courseForm.name = ''; courseForm.credit = 3; courseForm.hours = 48; courseForm.enabled = true }
 const resetTeacherForm = () => { teacherForm.name = ''; teacherForm.department = '' }
 const resetClassForm = () => { classForm.name = ''; classForm.grade = ''; classForm.department = '' }
 const resetClassroomForm = () => { classroomForm.name = ''; classroomForm.building = ''; classroomForm.capacity = 60; classroomForm.floor = 1 }
@@ -47,6 +47,11 @@ const saveCourse = () => {
     store.courses.push({ id: `c_${Date.now()}`, ...courseForm })
   }
   courseDialogVisible.value = false
+  emit('dataChanged')
+}
+
+const toggleCourseEnabled = (course: Course) => {
+  course.enabled = !course.enabled
   emit('dataChanged')
 }
 
@@ -154,9 +159,17 @@ const getStudentCount = (classId: string) => {
           <el-table-column prop="name" label="课程名称" />
           <el-table-column prop="credit" label="学分" width="70" />
           <el-table-column prop="hours" label="学时" width="70" />
-          <el-table-column label="操作" width="120">
+          <el-table-column label="状态" width="80">
+            <template #default="{ row }">
+              <el-tag :type="row.enabled ? 'success' : 'info'" size="small">{{ row.enabled ? '启用' : '停用' }}</el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="操作" width="140">
             <template #default="{ row }">
               <el-button link size="small" type="primary" @click="openCourseDialog(row)">编辑</el-button>
+              <el-button link size="small" :type="row.enabled ? 'warning' : 'success'" @click="toggleCourseEnabled(row)">
+                {{ row.enabled ? '停用' : '启用' }}
+              </el-button>
               <el-button link size="small" type="danger" @click="deleteCourse(row.id)">删除</el-button>
             </template>
           </el-table-column>
@@ -226,6 +239,9 @@ const getStudentCount = (classId: string) => {
         <el-form-item label="名称"><el-input v-model="courseForm.name" /></el-form-item>
         <el-form-item label="学分"><el-input-number v-model="courseForm.credit" :min="1" :max="10" /></el-form-item>
         <el-form-item label="学时"><el-input-number v-model="courseForm.hours" :min="8" :max="120" /></el-form-item>
+        <el-form-item label="启用">
+          <el-switch v-model="courseForm.enabled" />
+        </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="courseDialogVisible = false">取消</el-button>

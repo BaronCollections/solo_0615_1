@@ -4,7 +4,11 @@ import type { FormInstance, FormRules } from 'element-plus'
 import type { Schedule } from '../../mock/scheduling'
 import { DAY_LABELS } from '../../mock/scheduling'
 import { store } from '../../store/scheduling'
-import { detectConflicts, type Conflict } from '../../utils/conflict'
+import {
+  validateSchedulingRules,
+  filterEnabledCourses,
+  type RuleValidationResult,
+} from '../../utils/schedulingRules'
 
 const props = defineProps<{
   visible: boolean
@@ -20,7 +24,11 @@ const emit = defineEmits<{
 }>()
 
 const formRef = ref<FormInstance>()
-const conflicts = ref<Conflict[]>([])
+const ruleResult = ref<RuleValidationResult>({
+  passed: true,
+  errors: [],
+  classroomConflicts: [],
+})
 
 const form = reactive({
   courseId: '',
@@ -34,7 +42,9 @@ const form = reactive({
   periodEnd: 2,
 })
 
-const courseOptions = computed(() => store.courses.map(c => ({ label: c.name, value: c.id })))
+const courseOptions = computed(() =>
+  filterEnabledCourses(store.courses).map(c => ({ label: c.name, value: c.id }))
+)
 const teacherOptions = computed(() => store.teachers.map(t => ({ label: `${t.name}（${t.department}）`, value: t.id })))
 const classOptions = computed(() => store.classGroups.map(c => ({ label: c.name, value: c.id })))
 const classroomOptions = computed(() => store.classrooms.map(r => ({ label: `${r.name}（${r.building}，容纳${r.capacity}人）`, value: r.id })))
@@ -65,7 +75,7 @@ const title = computed(() => props.editingSchedule ? '编辑排课' : '新建排
 
 watch(() => props.visible, (val) => {
   if (val) {
-    conflicts.value = []
+    ruleResult.value = { passed: true, errors: [], classroomConflicts: [] }
     if (props.editingSchedule) {
       Object.assign(form, {
         courseId: props.editingSchedule.courseId,
@@ -95,9 +105,9 @@ watch(() => form.periodStart, (val) => {
   form.periodEnd = map[val] ?? 2
 })
 
-const runConflictDetection = () => {
+const runRuleValidation = () => {
   if (!form.courseId || !form.teacherId || !form.classId || !form.classroomId) {
-    conflicts.value = []
+    ruleResult.value = { passed: true, errors: [], classroomConflicts: [] }
     return
   }
   const newSchedule: Schedule = {
@@ -112,18 +122,24 @@ const runConflictDetection = () => {
     periodStart: form.periodStart,
     periodEnd: form.periodEnd,
   }
-  conflicts.value = detectConflicts(newSchedule, props.existingSchedules, props.editingSchedule?.id)
+  ruleResult.value = validateSchedulingRules(
+    newSchedule,
+    store.courses,
+    props.existingSchedules,
+    props.editingSchedule?.id
+  )
 }
 
 watch(
   () => [form.courseId, form.teacherId, form.classId, form.classroomId, form.dayOfWeek, form.periodStart, form.weekStart, form.weekEnd],
-  () => { runConflictDetection() }
+  () => { runRuleValidation() }
 )
 
 const handleSave = async () => {
   if (!formRef.value) return
   await formRef.value.validate()
-  if (conflicts.value.length > 0) return
+  runRuleValidation()
+  if (!ruleResult.value.passed) return
 
   const schedule: Schedule = {
     id: props.editingSchedule?.id ?? `s_${Date.now()}`,
@@ -145,15 +161,18 @@ const handleClose = () => {
   emit('update:visible', false)
 }
 
-const conflictTypeLabel = (type: string) => {
-  const map: Record<string, string> = { classroom: '教室冲突', teacher: '教师冲突', class: '班级冲突' }
-  return map[type] ?? type
-}
+const hasRuleErrors = computed(() => !ruleResult.value.passed)
 
-const conflictTypeTag = (type: string) => {
-  const map: Record<string, string> = { classroom: 'danger', teacher: 'warning', class: '' }
-  return map[type] ?? ''
-}
+const displayRuleErrors = computed(() => {
+  const items: { label: string; tag: string; reason: string }[] = []
+  if (ruleResult.value.disabledCourseError) {
+    items.push({ label: '课程已停用', tag: 'warning', reason: ruleResult.value.disabledCourseError })
+  }
+  for (const c of ruleResult.value.classroomConflicts) {
+    items.push({ label: '教室冲突', tag: 'danger', reason: c.reason })
+  }
+  return items
+})
 </script>
 
 <template>
@@ -225,13 +244,13 @@ const conflictTypeTag = (type: string) => {
       </el-row>
     </el-form>
 
-    <div v-if="conflicts.length > 0" class="conflict-warning">
-      <el-alert title="检测到以下冲突，请修改后重试" type="error" :closable="false" show-icon>
+    <div v-if="hasRuleErrors" class="conflict-warning">
+      <el-alert title="检测到以下问题，请修改后重试" type="error" :closable="false" show-icon>
         <template #default>
           <div class="conflict-list">
-            <div v-for="(c, i) in conflicts" :key="i" class="conflict-item">
-              <el-tag :type="conflictTypeTag(c.type)" size="small">{{ conflictTypeLabel(c.type) }}</el-tag>
-              <span class="conflict-reason">{{ c.reason }}</span>
+            <div v-for="(item, i) in displayRuleErrors" :key="i" class="conflict-item">
+              <el-tag :type="item.tag" size="small">{{ item.label }}</el-tag>
+              <span class="conflict-reason">{{ item.reason }}</span>
             </div>
           </div>
         </template>
@@ -240,7 +259,7 @@ const conflictTypeTag = (type: string) => {
 
     <template #footer>
       <el-button @click="handleClose">取消</el-button>
-      <el-button type="primary" :disabled="conflicts.length > 0" @click="handleSave">
+      <el-button type="primary" :disabled="hasRuleErrors" @click="handleSave">
         保存
       </el-button>
     </template>

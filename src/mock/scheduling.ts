@@ -3,6 +3,7 @@ export interface Course {
   name: string
   credit: number
   hours: number
+  enabled: boolean
 }
 
 export interface Teacher {
@@ -49,16 +50,16 @@ export interface Schedule {
 }
 
 export const mockCourses: Course[] = [
-  { id: 'c1', name: '高等数学', credit: 4, hours: 64 },
-  { id: 'c2', name: '大学英语', credit: 3, hours: 48 },
-  { id: 'c3', name: '数据结构', credit: 3, hours: 48 },
-  { id: 'c4', name: '操作系统', credit: 3, hours: 48 },
-  { id: 'c5', name: '计算机网络', credit: 3, hours: 48 },
-  { id: 'c6', name: '线性代数', credit: 3, hours: 48 },
-  { id: 'c7', name: '概率论与数理统计', credit: 3, hours: 48 },
-  { id: 'c8', name: '离散数学', credit: 3, hours: 48 },
-  { id: 'c9', name: '数据库原理', credit: 3, hours: 48 },
-  { id: 'c10', name: '软件工程', credit: 2, hours: 32 },
+  { id: 'c1', name: '高等数学', credit: 4, hours: 64, enabled: true },
+  { id: 'c2', name: '大学英语', credit: 3, hours: 48, enabled: true },
+  { id: 'c3', name: '数据结构', credit: 3, hours: 48, enabled: true },
+  { id: 'c4', name: '操作系统', credit: 3, hours: 48, enabled: true },
+  { id: 'c5', name: '计算机网络', credit: 3, hours: 48, enabled: true },
+  { id: 'c6', name: '线性代数', credit: 3, hours: 48, enabled: true },
+  { id: 'c7', name: '概率论与数理统计', credit: 3, hours: 48, enabled: true },
+  { id: 'c8', name: '离散数学', credit: 3, hours: 48, enabled: true },
+  { id: 'c9', name: '数据库原理', credit: 3, hours: 48, enabled: true },
+  { id: 'c10', name: '软件工程', credit: 2, hours: 32, enabled: true },
 ]
 
 export const mockTeachers: Teacher[] = [
