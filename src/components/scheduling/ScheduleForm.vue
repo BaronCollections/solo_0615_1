@@ -28,6 +28,7 @@ const ruleResult = ref<RuleValidationResult>({
   passed: true,
   errors: [],
   classroomConflicts: [],
+  disabledCourseError: undefined,
 })
 
 const form = reactive({
@@ -75,7 +76,7 @@ const title = computed(() => props.editingSchedule ? '编辑排课' : '新建排
 
 watch(() => props.visible, (val) => {
   if (val) {
-    ruleResult.value = { passed: true, errors: [], classroomConflicts: [] }
+    ruleResult.value = { passed: true, errors: [], classroomConflicts: [], disabledCourseError: undefined }
     if (props.editingSchedule) {
       Object.assign(form, {
         courseId: props.editingSchedule.courseId,
@@ -107,7 +108,7 @@ watch(() => form.periodStart, (val) => {
 
 const runRuleValidation = () => {
   if (!form.courseId || !form.teacherId || !form.classId || !form.classroomId) {
-    ruleResult.value = { passed: true, errors: [], classroomConflicts: [] }
+    ruleResult.value = { passed: true, errors: [], classroomConflicts: [], disabledCourseError: undefined }
     return
   }
   const newSchedule: Schedule = {
@@ -153,6 +154,7 @@ const handleSave = async () => {
     periodStart: form.periodStart,
     periodEnd: form.periodEnd,
   }
+  ruleResult.value = { passed: true, errors: [], classroomConflicts: [], disabledCourseError: undefined }
   emit('save', schedule)
   emit('update:visible', false)
 }

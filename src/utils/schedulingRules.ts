@@ -98,6 +98,7 @@ export function validateSchedulingRules(
     passed: true,
     errors,
     classroomConflicts: [],
+    disabledCourseError: undefined,
   }
 
   const courseCheck = checkCourseEnabled(schedule.courseId, allCourses)

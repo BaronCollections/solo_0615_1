@@ -225,4 +225,259 @@ describe('validateSchedulingRules - 规则统一验证入口', () => {
     const result = validateSchedulingRules(schedule, courses, existing, 's1')
     expect(result.passed).toBe(true)
   })
+
+  describe('边界：首次冲突后修改字段再验证 - 回归测试', () => {
+    const existingConflict = makeSchedule({
+      id: 'existing-1',
+      courseId: 'c1',
+      classroomId: 'r1',
+      dayOfWeek: 1,
+      periodStart: 1,
+      periodEnd: 2,
+      weekStart: 1,
+      weekEnd: 16,
+    })
+
+    it('先检测到教室冲突，修改为不冲突教室后应清空冲突并通过验证', () => {
+      const schedule = makeSchedule({
+        id: 'new-1',
+        courseId: 'c1',
+        classroomId: 'r1',
+        dayOfWeek: 1,
+        periodStart: 1,
+        periodEnd: 2,
+      })
+      const result1 = validateSchedulingRules(schedule, courses, [existingConflict])
+      expect(result1.passed).toBe(false)
+      expect(result1.classroomConflicts).toHaveLength(1)
+
+      const modifiedSchedule = { ...schedule, classroomId: 'r2' }
+      const result2 = validateSchedulingRules(modifiedSchedule, courses, [existingConflict])
+      expect(result2.passed).toBe(true)
+      expect(result2.classroomConflicts).toHaveLength(0)
+      expect(result2.errors).toHaveLength(0)
+      expect(result2.disabledCourseError).toBeUndefined()
+    })
+
+    it('先检测到教室冲突，修改为不冲突节次后应清空冲突并通过验证', () => {
+      const schedule = makeSchedule({
+        id: 'new-1',
+        courseId: 'c1',
+        classroomId: 'r1',
+        dayOfWeek: 1,
+        periodStart: 1,
+        periodEnd: 2,
+      })
+      const result1 = validateSchedulingRules(schedule, courses, [existingConflict])
+      expect(result1.passed).toBe(false)
+      expect(result1.classroomConflicts).toHaveLength(1)
+
+      const modifiedSchedule = { ...schedule, periodStart: 3, periodEnd: 4 }
+      const result2 = validateSchedulingRules(modifiedSchedule, courses, [existingConflict])
+      expect(result2.passed).toBe(true)
+      expect(result2.classroomConflicts).toHaveLength(0)
+      expect(result2.errors).toHaveLength(0)
+    })
+
+    it('先检测到教室冲突，修改为不冲突星期后应清空冲突并通过验证', () => {
+      const schedule = makeSchedule({
+        id: 'new-1',
+        courseId: 'c1',
+        classroomId: 'r1',
+        dayOfWeek: 1,
+        periodStart: 1,
+        periodEnd: 2,
+      })
+      const result1 = validateSchedulingRules(schedule, courses, [existingConflict])
+      expect(result1.passed).toBe(false)
+
+      const modifiedSchedule = { ...schedule, dayOfWeek: 2 }
+      const result2 = validateSchedulingRules(modifiedSchedule, courses, [existingConflict])
+      expect(result2.passed).toBe(true)
+      expect(result2.classroomConflicts).toHaveLength(0)
+    })
+
+    it('先检测到教室冲突，修改为不冲突周次后应清空冲突并通过验证', () => {
+      const schedule = makeSchedule({
+        id: 'new-1',
+        courseId: 'c1',
+        classroomId: 'r1',
+        dayOfWeek: 1,
+        periodStart: 1,
+        periodEnd: 2,
+        weekStart: 1,
+        weekEnd: 16,
+      })
+      const result1 = validateSchedulingRules(schedule, courses, [existingConflict])
+      expect(result1.passed).toBe(false)
+
+      const modifiedSchedule = { ...schedule, weekStart: 17, weekEnd: 20 }
+      const result2 = validateSchedulingRules(modifiedSchedule, courses, [existingConflict])
+      expect(result2.passed).toBe(true)
+      expect(result2.classroomConflicts).toHaveLength(0)
+    })
+
+    it('每次验证应返回独立结果，前一次冲突不应污染后一次验证', () => {
+      const conflictSchedule = makeSchedule({
+        id: 'new-1',
+        courseId: 'c1',
+        classroomId: 'r1',
+      })
+      const result1 = validateSchedulingRules(conflictSchedule, courses, [existingConflict])
+      expect(result1.passed).toBe(false)
+      expect(result1.classroomConflicts).toHaveLength(1)
+
+      const okSchedule = makeSchedule({
+        id: 'new-2',
+        courseId: 'c1',
+        classroomId: 'r2',
+      })
+      const result2 = validateSchedulingRules(okSchedule, courses, [existingConflict])
+      expect(result2.passed).toBe(true)
+      expect(result2.classroomConflicts).toHaveLength(0)
+
+      expect(result1).not.toBe(result2)
+      expect(result1.classroomConflicts).not.toBe(result2.classroomConflicts)
+    })
+
+    it('验证通过时 disabledCourseError 应显式为 undefined', () => {
+      const schedule = makeSchedule({
+        id: 'new-1',
+        courseId: 'c1',
+        classroomId: 'r2',
+      })
+      const result = validateSchedulingRules(schedule, courses, [existingConflict])
+      expect(result.passed).toBe(true)
+      expect(result.disabledCourseError).toBeUndefined()
+      expect('disabledCourseError' in result).toBe(true)
+    })
+
+    it('从课程禁用错误改为正常课程后，disabledCourseError 应清空', () => {
+      const disabledSchedule = makeSchedule({
+        id: 'new-1',
+        courseId: 'c2',
+        classroomId: 'r2',
+      })
+      const result1 = validateSchedulingRules(disabledSchedule, courses, [existingConflict])
+      expect(result1.passed).toBe(false)
+      expect(result1.disabledCourseError).toBeDefined()
+
+      const fixedSchedule = { ...disabledSchedule, courseId: 'c1' }
+      const result2 = validateSchedulingRules(fixedSchedule, courses, [existingConflict])
+      expect(result2.passed).toBe(true)
+      expect(result2.disabledCourseError).toBeUndefined()
+      expect(result2.classroomConflicts).toHaveLength(0)
+    })
+
+    it('先有教室冲突后改到不冲突教室，所有错误字段应清空', () => {
+      const conflictSchedule = makeSchedule({
+        id: 'new-1',
+        courseId: 'c1',
+        classroomId: 'r1',
+        dayOfWeek: 1,
+        periodStart: 1,
+        periodEnd: 2,
+      })
+      const result1 = validateSchedulingRules(conflictSchedule, courses, [existingConflict])
+      expect(result1.passed).toBe(false)
+      expect(result1.classroomConflicts).toHaveLength(1)
+      expect(result1.errors.length).toBeGreaterThan(0)
+
+      const fixedSchedule = { ...conflictSchedule, classroomId: 'r2' }
+      const result2 = validateSchedulingRules(fixedSchedule, courses, [existingConflict])
+      expect(result2.passed).toBe(true)
+      expect(result2.classroomConflicts).toHaveLength(0)
+      expect(result2.errors).toHaveLength(0)
+      expect(result2.disabledCourseError).toBeUndefined()
+    })
+
+    it('先有教室冲突后改到不冲突节次，所有错误字段应清空', () => {
+      const conflictSchedule = makeSchedule({
+        id: 'new-1',
+        courseId: 'c1',
+        classroomId: 'r1',
+        dayOfWeek: 1,
+        periodStart: 1,
+        periodEnd: 2,
+      })
+      const result1 = validateSchedulingRules(conflictSchedule, courses, [existingConflict])
+      expect(result1.passed).toBe(false)
+      expect(result1.classroomConflicts).toHaveLength(1)
+
+      const fixedSchedule = { ...conflictSchedule, periodStart: 3, periodEnd: 4 }
+      const result2 = validateSchedulingRules(fixedSchedule, courses, [existingConflict])
+      expect(result2.passed).toBe(true)
+      expect(result2.classroomConflicts).toHaveLength(0)
+      expect(result2.errors).toHaveLength(0)
+    })
+
+    it('先有教室冲突后改到不冲突星期，所有错误字段应清空', () => {
+      const conflictSchedule = makeSchedule({
+        id: 'new-1',
+        courseId: 'c1',
+        classroomId: 'r1',
+        dayOfWeek: 1,
+        periodStart: 1,
+        periodEnd: 2,
+      })
+      const result1 = validateSchedulingRules(conflictSchedule, courses, [existingConflict])
+      expect(result1.passed).toBe(false)
+      expect(result1.classroomConflicts).toHaveLength(1)
+
+      const fixedSchedule = { ...conflictSchedule, dayOfWeek: 2 }
+      const result2 = validateSchedulingRules(fixedSchedule, courses, [existingConflict])
+      expect(result2.passed).toBe(true)
+      expect(result2.classroomConflicts).toHaveLength(0)
+      expect(result2.errors).toHaveLength(0)
+    })
+
+    it('先有教室冲突后改到不冲突周次，所有错误字段应清空', () => {
+      const conflictSchedule = makeSchedule({
+        id: 'new-1',
+        courseId: 'c1',
+        classroomId: 'r1',
+        dayOfWeek: 1,
+        periodStart: 1,
+        periodEnd: 2,
+        weekStart: 1,
+        weekEnd: 16,
+      })
+      const result1 = validateSchedulingRules(conflictSchedule, courses, [existingConflict])
+      expect(result1.passed).toBe(false)
+      expect(result1.classroomConflicts).toHaveLength(1)
+
+      const fixedSchedule = { ...conflictSchedule, weekStart: 17, weekEnd: 20 }
+      const result2 = validateSchedulingRules(fixedSchedule, courses, [existingConflict])
+      expect(result2.passed).toBe(true)
+      expect(result2.classroomConflicts).toHaveLength(0)
+      expect(result2.errors).toHaveLength(0)
+    })
+
+    it('同时有课程禁用和教室冲突，先改课程再改教室后应完全通过', () => {
+      const badSchedule = makeSchedule({
+        id: 'new-1',
+        courseId: 'c2',
+        classroomId: 'r1',
+      })
+      const result1 = validateSchedulingRules(badSchedule, courses, [existingConflict])
+      expect(result1.passed).toBe(false)
+      expect(result1.disabledCourseError).toBeDefined()
+      expect(result1.classroomConflicts).toHaveLength(1)
+      expect(result1.errors).toHaveLength(2)
+
+      const fixedCourse = { ...badSchedule, courseId: 'c1' }
+      const result2 = validateSchedulingRules(fixedCourse, courses, [existingConflict])
+      expect(result2.passed).toBe(false)
+      expect(result2.disabledCourseError).toBeUndefined()
+      expect(result2.classroomConflicts).toHaveLength(1)
+      expect(result2.errors).toHaveLength(1)
+
+      const fixedAll = { ...fixedCourse, classroomId: 'r2' }
+      const result3 = validateSchedulingRules(fixedAll, courses, [existingConflict])
+      expect(result3.passed).toBe(true)
+      expect(result3.disabledCourseError).toBeUndefined()
+      expect(result3.classroomConflicts).toHaveLength(0)
+      expect(result3.errors).toHaveLength(0)
+    })
+  })
 })
